@@ -2,75 +2,60 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Pantin – Grand écart 180°</title>
+  <title>Pantin – Grand écart & lumière</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 </head>
 
 <body>
-<a-scene background="color:#ECECEC">
+<a-scene background="color:#111">
+
+  <!-- LUMIÈRES -->
+  <a-entity id="ambientLight"
+            light="type: ambient; color: #ffffff; intensity: 0.6">
+  </a-entity>
+
+  <a-entity id="mainLight"
+            light="type: directional; color: #ffffff; intensity: 0.9"
+            position="1 3 2">
+  </a-entity>
 
   <!-- SOL -->
   <a-plane rotation="-90 0 0"
            width="10"
            height="10"
-           color="#bbb">
+           color="#666">
   </a-plane>
 
-  <!-- CAISSE GAUCHE -->
+  <!-- CAISSES -->
   <a-entity id="boxL">
     <a-box position="0 0.25 0"
-           width="0.6"
-           height="0.5"
-           depth="0.6"
+           width="0.6" height="0.5" depth="0.6"
            color="#7a4a1f">
     </a-box>
-
-    <!-- chaussure -->
     <a-box id="footL"
            position="0 0.55 0"
-           width="0.3"
-           height="0.1"
-           depth="0.4"
+           width="0.3" height="0.1" depth="0.4"
            color="#111">
     </a-box>
   </a-entity>
 
-  <!-- CAISSE DROITE -->
   <a-entity id="boxR">
     <a-box position="0 0.25 0"
-           width="0.6"
-           height="0.5"
-           depth="0.6"
+           width="0.6" height="0.5" depth="0.6"
            color="#7a4a1f">
     </a-box>
-
-    <!-- chaussure -->
     <a-box id="footR"
            position="0 0.55 0"
-           width="0.3"
-           height="0.1"
-           depth="0.4"
+           width="0.3" height="0.1" depth="0.4"
            color="#111">
     </a-box>
   </a-entity>
 
-  <!-- PANTIN (ÉPURÉ ET CORRECT) -->
+  <!-- PANTIN -->
   <a-entity id="pantin" pantin>
-
-    <!-- pelvis LOGIQUE (sans mesh) -->
     <a-entity id="pelvis"></a-entity>
-
-    <!-- jambes rigides -->
-    <a-cylinder id="legL"
-                radius="0.08"
-                color="#2563eb">
-    </a-cylinder>
-
-    <a-cylinder id="legR"
-                radius="0.08"
-                color="#2563eb">
-    </a-cylinder>
-
+    <a-cylinder id="legL" radius="0.08" color="#2563eb"></a-cylinder>
+    <a-cylinder id="legR" radius="0.08" color="#2563eb"></a-cylinder>
   </a-entity>
 
   <!-- CAMÉRA -->
@@ -82,36 +67,54 @@
 
 <script>
 /* =========================================================
-   PARAMÈTRES PHYSIQUES / GÉOMÉTRIQUES
+   PARAMÈTRES
    ========================================================= */
 
-const boxWidth  = 0.6;   // largeur caisse
-const legLength = 1.2;   // longueur jambe rigide
+const boxWidth  = 0.6;
+const legLength = 1.2;
 
-const minSpread = boxWidth;        // collision caisses
-const maxSpread = 2 * legLength;  // grand écart 180°
+const minSpread = boxWidth;
+const maxSpread = 2 * legLength;
 
 let spread = 1.2;
 let spreading = false;
 
 /* =========================================================
-   INTERACTION : CLIC = ÉCARTER / RELÂCHER = RASSEMBLER
+   INTERACTION CLIC
    ========================================================= */
 
 window.addEventListener("mousedown", () => spreading = true);
 window.addEventListener("mouseup",   () => spreading = false);
 
+/* =========================================================
+   CAISSES + LUMIÈRE
+   ========================================================= */
+
 AFRAME.registerComponent("box-spread", {
   tick() {
     const speed = 0.02;
-
     spread += spreading ? speed : -speed;
-
-    // contraintes physiques
     spread = Math.min(Math.max(spread, minSpread), maxSpread);
 
+    // position des caisses
     document.querySelector("#boxL").object3D.position.x = -spread / 2;
     document.querySelector("#boxR").object3D.position.x =  spread / 2;
+
+    // ---- LUMIÈRE DYNAMIQUE ----
+    const t = (spread - minSpread) / (maxSpread - minSpread); // 0 → 1
+
+    // interpolation blanc → rouge
+    const r = 1.0;
+    const g = 1.0 - t;
+    const b = 1.0 - t;
+
+    const color = `rgb(${Math.floor(r*255)}, ${Math.floor(g*255)}, ${Math.floor(b*255)})`;
+
+    document.querySelector("#ambientLight")
+      .setAttribute("light", "color", color);
+
+    document.querySelector("#mainLight")
+      .setAttribute("light", "color", color);
   }
 });
 
@@ -119,14 +122,13 @@ document.querySelector("a-scene")
   .setAttribute("box-spread", "");
 
 /* =========================================================
-   PANTIN GÉOMÉTRIQUE (GRAND ÉCART)
+   PANTIN GÉOMÉTRIQUE
    ========================================================= */
 
 AFRAME.registerComponent("pantin", {
   tick() {
     const footL = document.querySelector("#footL")
       .object3D.getWorldPosition(new THREE.Vector3());
-
     const footR = document.querySelector("#footR")
       .object3D.getWorldPosition(new THREE.Vector3());
 
@@ -134,13 +136,10 @@ AFRAME.registerComponent("pantin", {
     const half = d / 2;
 
     let pelvisY;
-
-    // grand écart facial 180°
     if (d >= 2 * legLength) {
       pelvisY = footL.y;
     } else {
-      pelvisY = footL.y +
-        Math.sqrt(legLength * legLength - half * half);
+      pelvisY = footL.y + Math.sqrt(legLength * legLength - half * half);
     }
 
     const pelvisX = (footL.x + footR.x) / 2;
@@ -164,8 +163,6 @@ function connectLeg(selector, foot, pelvis) {
   const length = foot.distanceTo(pelvis);
 
   leg.position.copy(mid);
-
-  // cylindre A-Frame = hauteur 1 par défaut
   leg.scale.set(1, length, 1);
 
   leg.lookAt(pelvis);
