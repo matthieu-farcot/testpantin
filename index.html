@@ -2,46 +2,54 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pantin – Grand écart</title>
+  <title>Pantin Grand Écart</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 </head>
 
 <body>
 <a-scene background="color:#ECECEC">
 
-  <!-- Sol -->
-  <a-plane rotation="-90 0 0" width="10" height="10" color="#aaa"></a-plane>
+  <!-- Assets -->
+  <a-assets></a-assets>
 
-  <!-- CAISSE GAUCHE -->
-  <a-entity id="boxL" position="-0.8 0.25 0">
-    <a-box width="0.6" height="0.5" depth="0.6" color="#8B4513"></a-box>
-    <a-box id="footL" position="0 0.3 0" width="0.25" height="0.1" depth="0.4" color="#222"></a-box>
+  <!-- Sol -->
+  <a-plane id="ground" rotation="-90 0 0" width="10" height="10" color="#bbb"></a-plane>
+
+  <!-- Curseur souris -->
+  <a-entity cursor="rayOrigin: mouse"
+            raycaster="objects: .draggable"></a-entity>
+
+  <!-- Caisse gauche -->
+  <a-entity id="boxL" position="-1 0.25 0">
+    <a-box width="0.6" height="0.5" depth="0.6" color="#7a4a1f"></a-box>
+    <a-box id="footL" position="0 0.3 0" width="0.3" height="0.1" depth="0.4" color="#111"></a-box>
   </a-entity>
 
-  <!-- CAISSE DROITE (drag souris) -->
-  <a-entity id="boxR" position="0.8 0.25 0" draggable>
-    <a-box width="0.6" height="0.5" depth="0.6" color="#8B4513"></a-box>
-    <a-box id="footR" position="0 0.3 0" width="0.25" height="0.1" depth="0.4" color="#222"></a-box>
+  <!-- Caisse droite draggable -->
+  <a-entity id="boxR" class="draggable" position="1 0.25 0" drag-x>
+    <a-box width="0.6" height="0.5" depth="0.6" color="#7a4a1f"></a-box>
+    <a-box id="footR" position="0 0.3 0" width="0.3" height="0.1" depth="0.4" color="#111"></a-box>
   </a-entity>
 
   <!-- PANTIN -->
   <a-entity id="pantin" pantin>
 
-    <!-- Jambe gauche -->
-    <a-box id="legL" width="0.2" height="1" depth="0.2" color="#0077ff"></a-box>
+    <!-- Bassin -->
+    <a-sphere id="pelvis" radius="0.15" color="#333"></a-sphere>
 
-    <!-- Jambe droite -->
-    <a-box id="legR" width="0.2" height="1" depth="0.2" color="#0077ff"></a-box>
+    <!-- Jambes -->
+    <a-box id="legL" width="0.2" height="1" depth="0.2" color="#3b82f6"></a-box>
+    <a-box id="legR" width="0.2" height="1" depth="0.2" color="#3b82f6"></a-box>
 
     <!-- Tronc -->
-    <a-box id="torso" width="0.5" height="0.8" depth="0.3" color="#ff5555"></a-box>
+    <a-box id="torso" width="0.45" height="0.8" depth="0.25" color="#ef4444"></a-box>
 
     <!-- Bras -->
-    <a-box width="0.15" height="0.7" depth="0.15" position="-0.4 0.2 0" color="#ffaa00"></a-box>
-    <a-box width="0.15" height="0.7" depth="0.15" position="0.4 0.2 0" color="#ffaa00"></a-box>
+    <a-box width="0.15" height="0.6" depth="0.15" position="-0.35 0.2 0" color="#f59e0b"></a-box>
+    <a-box width="0.15" height="0.6" depth="0.15" position="0.35 0.2 0" color="#f59e0b"></a-box>
 
     <!-- Tête -->
-    <a-sphere radius="0.25" position="0 0.8 0" color="#ffccaa"></a-sphere>
+    <a-sphere radius="0.25" position="0 0.7 0" color="#fcd5b5"></a-sphere>
 
   </a-entity>
 
@@ -53,12 +61,13 @@
 </a-scene>
 
 <script>
-/* -------- DRAG SOURIS -------- */
-AFRAME.registerComponent("draggable", {
+/* -------- DRAG SUR AXE X -------- */
+AFRAME.registerComponent("drag-x", {
   init() {
     this.dragging = false;
     this.el.addEventListener("mousedown", () => this.dragging = true);
     window.addEventListener("mouseup", () => this.dragging = false);
+
     window.addEventListener("mousemove", e => {
       if (!this.dragging) return;
       this.el.object3D.position.x += e.movementX * 0.005;
@@ -72,34 +81,28 @@ AFRAME.registerComponent("pantin", {
     const footL = document.querySelector("#footL").object3D.getWorldPosition(new THREE.Vector3());
     const footR = document.querySelector("#footR").object3D.getWorldPosition(new THREE.Vector3());
 
-    const legLength = 1.0;
+    const legLength = 1;
     const dist = footL.distanceTo(footR);
     const half = dist / 2;
 
-    // Clamp pour éviter NaN
-    const h = Math.sqrt(Math.max(legLength * legLength - half * half, 0.2));
+    const pelvisHeight = Math.sqrt(Math.max(legLength * legLength - half * half, 0.2));
+    const pelvisX = (footL.x + footR.x) / 2;
+    const pelvisY = footL.y + pelvisHeight;
 
-    // Bassin
-    const centerX = (footL.x + footR.x) / 2;
-    const pelvisY = footL.y + h;
+    const pelvis = document.querySelector("#pelvis").object3D;
+    pelvis.position.set(pelvisX, pelvisY, 0);
 
-    // Position jambes
     const legL = document.querySelector("#legL").object3D;
     const legR = document.querySelector("#legR").object3D;
 
-    legL.position.set(footL.x, pelvisY - h / 2, 0);
-    legR.position.set(footR.x, pelvisY - h / 2, 0);
+    legL.position.set(footL.x, pelvisY - legLength / 2, 0);
+    legR.position.set(footR.x, pelvisY - legLength / 2, 0);
 
-    // Rotation jambes (hanche)
-    legL.lookAt(centerX, pelvisY, 0);
-    legR.lookAt(centerX, pelvisY, 0);
+    legL.lookAt(pelvisX, pelvisY, 0);
+    legR.lookAt(pelvisX, pelvisY, 0);
 
-    // Tronc
     const torso = document.querySelector("#torso").object3D;
-    torso.position.set(centerX, pelvisY + 0.6, 0);
-
-    // Position globale pantin
-    this.el.object3D.position.z = 0;
+    torso.position.set(pelvisX, pelvisY + 0.5, 0);
   }
 });
 </script>
