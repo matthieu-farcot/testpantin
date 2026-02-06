@@ -1,100 +1,108 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Patin – Grand écart</title>
-    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  </head>
+<head>
+  <meta charset="utf-8">
+  <title>Pantin – Grand écart</title>
+  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+</head>
 
-  <body>
-    <a-scene background="color: #ECECEC">
+<body>
+<a-scene background="color:#ECECEC">
 
-      <!-- Sol -->
-      <a-plane rotation="-90 0 0" width="10" height="10" color="#aaa"></a-plane>
+  <!-- Sol -->
+  <a-plane rotation="-90 0 0" width="10" height="10" color="#aaa"></a-plane>
 
-      <!-- Caisse gauche -->
-      <a-entity id="boxLeft" position="-1 0.25 0">
-        <a-box width="0.6" height="0.5" depth="0.6" color="#8B4513"></a-box>
+  <!-- CAISSE GAUCHE -->
+  <a-entity id="boxL" position="-0.8 0.25 0">
+    <a-box width="0.6" height="0.5" depth="0.6" color="#8B4513"></a-box>
+    <a-box id="footL" position="0 0.3 0" width="0.25" height="0.1" depth="0.4" color="#222"></a-box>
+  </a-entity>
 
-        <!-- Pied gauche (collé à la caisse) -->
-        <a-box
-          id="footLeft"
-          position="0 0.3 0"
-          width="0.2"
-          height="0.1"
-          depth="0.4"
-          color="#222">
-        </a-box>
-      </a-entity>
+  <!-- CAISSE DROITE (drag souris) -->
+  <a-entity id="boxR" position="0.8 0.25 0" draggable>
+    <a-box width="0.6" height="0.5" depth="0.6" color="#8B4513"></a-box>
+    <a-box id="footR" position="0 0.3 0" width="0.25" height="0.1" depth="0.4" color="#222"></a-box>
+  </a-entity>
 
-      <!-- Caisse droite (déplaçable) -->
-      <a-entity id="boxRight" position="1 0.25 0" move-box>
-        <a-box width="0.6" height="0.5" depth="0.6" color="#8B4513"></a-box>
+  <!-- PANTIN -->
+  <a-entity id="pantin" pantin>
 
-        <!-- Pied droit -->
-        <a-box
-          id="footRight"
-          position="0 0.3 0"
-          width="0.2"
-          height="0.1"
-          depth="0.4"
-          color="#222">
-        </a-box>
-      </a-entity>
+    <!-- Jambe gauche -->
+    <a-box id="legL" width="0.2" height="1" depth="0.2" color="#0077ff"></a-box>
 
-      <!-- Corps du patin -->
-      <a-box
-        id="body"
-        position="0 1 0"
-        width="0.3"
-        height="1"
-        depth="0.3"
-        color="#0077ff">
-      </a-box>
+    <!-- Jambe droite -->
+    <a-box id="legR" width="0.2" height="1" depth="0.2" color="#0077ff"></a-box>
 
-      <!-- Caméra -->
-      <a-entity position="0 2 4">
-        <a-camera></a-camera>
-      </a-entity>
+    <!-- Tronc -->
+    <a-box id="torso" width="0.5" height="0.8" depth="0.3" color="#ff5555"></a-box>
 
-    </a-scene>
+    <!-- Bras -->
+    <a-box width="0.15" height="0.7" depth="0.15" position="-0.4 0.2 0" color="#ffaa00"></a-box>
+    <a-box width="0.15" height="0.7" depth="0.15" position="0.4 0.2 0" color="#ffaa00"></a-box>
 
-    <script>
-      // Déplacement de la caisse droite avec les flèches
-      AFRAME.registerComponent("move-box", {
-        tick: function () {
-          const pos = this.el.object3D.position;
-          const speed = 0.02;
+    <!-- Tête -->
+    <a-sphere radius="0.25" position="0 0.8 0" color="#ffccaa"></a-sphere>
 
-          if (keys["ArrowLeft"]) pos.x -= speed;
-          if (keys["ArrowRight"]) pos.x += speed;
-        }
-      });
+  </a-entity>
 
-      const keys = {};
-      window.addEventListener("keydown", e => keys[e.key] = true);
-      window.addEventListener("keyup", e => keys[e.key] = false);
+  <!-- Caméra -->
+  <a-entity position="0 2.5 4">
+    <a-camera></a-camera>
+  </a-entity>
 
-      // Mise à jour du corps du patin (grand écart)
-      AFRAME.registerComponent("patin-body", {
-        tick: function () {
-          const footL = document.querySelector("#footLeft").object3D.getWorldPosition(new THREE.Vector3());
-          const footR = document.querySelector("#footRight").object3D.getWorldPosition(new THREE.Vector3());
+</a-scene>
 
-          // Centre entre les deux pieds
-          const center = footL.clone().add(footR).multiplyScalar(0.5);
-          this.el.object3D.position.copy(center);
-          this.el.object3D.position.y += 0.6;
+<script>
+/* -------- DRAG SOURIS -------- */
+AFRAME.registerComponent("draggable", {
+  init() {
+    this.dragging = false;
+    this.el.addEventListener("mousedown", () => this.dragging = true);
+    window.addEventListener("mouseup", () => this.dragging = false);
+    window.addEventListener("mousemove", e => {
+      if (!this.dragging) return;
+      this.el.object3D.position.x += e.movementX * 0.005;
+    });
+  }
+});
 
-          // Distance entre les pieds
-          const distance = footL.distanceTo(footR);
+/* -------- PANTIN -------- */
+AFRAME.registerComponent("pantin", {
+  tick() {
+    const footL = document.querySelector("#footL").object3D.getWorldPosition(new THREE.Vector3());
+    const footR = document.querySelector("#footR").object3D.getWorldPosition(new THREE.Vector3());
 
-          // Étirement du corps
-          this.el.object3D.scale.y = distance * 0.8;
-        }
-      });
+    const legLength = 1.0;
+    const dist = footL.distanceTo(footR);
+    const half = dist / 2;
 
-      document.querySelector("#body").setAttribute("patin-body", "");
-    </script>
-  </body>
+    // Clamp pour éviter NaN
+    const h = Math.sqrt(Math.max(legLength * legLength - half * half, 0.2));
+
+    // Bassin
+    const centerX = (footL.x + footR.x) / 2;
+    const pelvisY = footL.y + h;
+
+    // Position jambes
+    const legL = document.querySelector("#legL").object3D;
+    const legR = document.querySelector("#legR").object3D;
+
+    legL.position.set(footL.x, pelvisY - h / 2, 0);
+    legR.position.set(footR.x, pelvisY - h / 2, 0);
+
+    // Rotation jambes (hanche)
+    legL.lookAt(centerX, pelvisY, 0);
+    legR.lookAt(centerX, pelvisY, 0);
+
+    // Tronc
+    const torso = document.querySelector("#torso").object3D;
+    torso.position.set(centerX, pelvisY + 0.6, 0);
+
+    // Position globale pantin
+    this.el.object3D.position.z = 0;
+  }
+});
+</script>
+
+</body>
 </html>
