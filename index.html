@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pantin Grand Écart</title>
+  <title>Pantin Grand Écart – clic</title>
   <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 </head>
 
@@ -10,44 +10,19 @@
 <a-scene background="color:#ECECEC">
 
   <!-- SOL -->
-  <a-plane id="ground"
-           rotation="-90 0 0"
-           width="10"
-           height="10"
-           color="#bbb">
-  </a-plane>
+  <a-plane rotation="-90 0 0" width="10" height="10" color="#bbb"></a-plane>
 
-  <!-- CURSOR SOURIS -->
-  <a-entity id="cursor"
-            cursor="rayOrigin: mouse"
-            raycaster="objects: .draggable, #ground">
+  <!-- CAISSES -->
+  <a-entity id="boxL" position="-0.8 0.25 0">
+    <a-box width="0.6" height="0.5" depth="0.6" color="#7a4a1f"></a-box>
+    <a-box id="footL" position="0 0.3 0"
+           width="0.3" height="0.1" depth="0.4" color="#111"></a-box>
   </a-entity>
 
-  <!-- CAISSE GAUCHE -->
-  <a-entity id="boxL" position="-1 0.25 0">
+  <a-entity id="boxR" position="0.8 0.25 0">
     <a-box width="0.6" height="0.5" depth="0.6" color="#7a4a1f"></a-box>
-    <a-box id="footL"
-           position="0 0.3 0"
-           width="0.3"
-           height="0.1"
-           depth="0.4"
-           color="#111">
-    </a-box>
-  </a-entity>
-
-  <!-- CAISSE DROITE DRAGGABLE -->
-  <a-entity id="boxR"
-            class="draggable"
-            position="1 0.25 0"
-            drag-on-ground>
-    <a-box width="0.6" height="0.5" depth="0.6" color="#7a4a1f"></a-box>
-    <a-box id="footR"
-           position="0 0.3 0"
-           width="0.3"
-           height="0.1"
-           depth="0.4"
-           color="#111">
-    </a-box>
+    <a-box id="footR" position="0 0.3 0"
+           width="0.3" height="0.1" depth="0.4" color="#111"></a-box>
   </a-entity>
 
   <!-- PANTIN -->
@@ -56,18 +31,19 @@
     <!-- Bassin -->
     <a-sphere id="pelvis" radius="0.15" color="#333"></a-sphere>
 
-    <!-- Jambes -->
-    <a-box id="legL" width="0.2" height="1" depth="0.2" color="#3b82f6"></a-box>
-    <a-box id="legR" width="0.2" height="1" depth="0.2" color="#3b82f6"></a-box>
+    <!-- Jambes (cylindres connecteurs) -->
+    <a-cylinder id="legL" radius="0.1" color="#3b82f6"></a-cylinder>
+    <a-cylinder id="legR" radius="0.1" color="#3b82f6"></a-cylinder>
 
     <!-- Tronc -->
-    <a-box id="torso" width="0.45" height="0.8" depth="0.25" color="#ef4444"></a-box>
+    <a-box id="torso" width="0.45" height="0.8" depth="0.25"
+           color="#ef4444"></a-box>
 
     <!-- Bras -->
     <a-box width="0.15" height="0.6" depth="0.15"
-           position="-0.35 0.2 0" color="#f59e0b"></a-box>
+           position="-0.4 0.2 0" color="#f59e0b"></a-box>
     <a-box width="0.15" height="0.6" depth="0.15"
-           position="0.35 0.2 0" color="#f59e0b"></a-box>
+           position="0.4 0.2 0" color="#f59e0b"></a-box>
 
     <!-- Tête -->
     <a-sphere radius="0.25" position="0 0.7 0" color="#fcd5b5"></a-sphere>
@@ -82,36 +58,26 @@
 </a-scene>
 
 <script>
-/* -------- DRAG CAISSE SUR LE SOL -------- */
-AFRAME.registerComponent("drag-on-ground", {
-  init() {
-    this.dragging = false;
-    this.cursor = document.querySelector("#cursor");
+let expanding = false;
+let spread = 1.6;
 
-    this.el.addEventListener("mousedown", () => {
-      this.dragging = true;
-    });
+window.addEventListener("mousedown", () => expanding = true);
+window.addEventListener("mouseup", () => expanding = false);
 
-    window.addEventListener("mouseup", () => {
-      this.dragging = false;
-    });
-  },
-
+/* -------- ANIMATION DES CAISSES -------- */
+AFRAME.registerComponent("box-spread", {
   tick() {
-    if (!this.dragging) return;
+    const speed = 0.02;
+    spread += expanding ? speed : -speed;
+    spread = Math.min(Math.max(spread, 0.6), 2.2);
 
-    const intersections = this.cursor.components.raycaster.intersections;
-    if (!intersections.length) return;
-
-    const hit = intersections.find(i => i.object.el.id === "ground");
-    if (!hit) return;
-
-    // déplacement uniquement sur X
-    this.el.object3D.position.x = hit.point.x;
+    document.querySelector("#boxL").object3D.position.x = -spread / 2;
+    document.querySelector("#boxR").object3D.position.x =  spread / 2;
   }
 });
+document.querySelector("a-scene").setAttribute("box-spread", "");
 
-/* -------- PANTIN GRAND ÉCART -------- */
+/* -------- PANTIN -------- */
 AFRAME.registerComponent("pantin", {
   tick() {
     const footL = document.querySelector("#footL")
@@ -119,37 +85,39 @@ AFRAME.registerComponent("pantin", {
     const footR = document.querySelector("#footR")
       .object3D.getWorldPosition(new THREE.Vector3());
 
-    const legLength = 1.0;
+    const legLength = 1.2;
     const d = footL.distanceTo(footR);
     const half = d / 2;
 
-    // géométrie du grand écart
-    const pelvisHeight = Math.sqrt(
-      Math.max(legLength * legLength - half * half, 0.15)
-    );
-
+    // hauteur du bassin (grand écart)
+    const pelvisY = footL.y +
+      Math.sqrt(Math.max(legLength * legLength - half * half, 0.1));
     const pelvisX = (footL.x + footR.x) / 2;
-    const pelvisY = footL.y + pelvisHeight;
 
-    // Bassin
     const pelvis = document.querySelector("#pelvis").object3D;
     pelvis.position.set(pelvisX, pelvisY, 0);
 
-    // Jambes
-    const legL = document.querySelector("#legL").object3D;
-    const legR = document.querySelector("#legR").object3D;
+    // jambes connectées
+    connectLeg("#legL", footL, pelvis.position);
+    connectLeg("#legR", footR, pelvis.position);
 
-    legL.position.set(footL.x, pelvisY - legLength / 2, 0);
-    legR.position.set(footR.x, pelvisY - legLength / 2, 0);
-
-    legL.lookAt(pelvisX, pelvisY, 0);
-    legR.lookAt(pelvisX, pelvisY, 0);
-
-    // Tronc
+    // tronc
     const torso = document.querySelector("#torso").object3D;
     torso.position.set(pelvisX, pelvisY + 0.5, 0);
   }
 });
+
+function connectLeg(id, foot, pelvis) {
+  const leg = document.querySelector(id).object3D;
+
+  const mid = foot.clone().add(pelvis).multiplyScalar(0.5);
+  const length = foot.distanceTo(pelvis);
+
+  leg.position.copy(mid);
+  leg.scale.set(1, length / 1, 1); // cylindre unité = 1
+  leg.lookAt(pelvis);
+  leg.rotateX(Math.PI / 2); // alignement cylindre
+}
 </script>
 
 </body>
