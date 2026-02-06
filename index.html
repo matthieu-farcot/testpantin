@@ -45,6 +45,11 @@
 let spreading = false;
 let spread = 1.2;
 
+const boxWidth = 0.6;
+const legLength = 1.2;
+const minSpread = boxWidth;
+const maxSpread = 2 * legLength;
+
 window.addEventListener("mousedown", () => spreading = true);
 window.addEventListener("mouseup", () => spreading = false);
 
@@ -52,13 +57,14 @@ AFRAME.registerComponent("box-spread", {
   tick() {
     const speed = 0.02;
     spread += spreading ? speed : -speed;
-    spread = Math.min(Math.max(spread, 0.4), 2.4); // 180°
+
+    // contrainte physique : pas d'interpénétration
+    spread = Math.min(Math.max(spread, minSpread), maxSpread);
 
     document.querySelector("#boxL").object3D.position.x = -spread / 2;
     document.querySelector("#boxR").object3D.position.x =  spread / 2;
   }
 });
-document.querySelector("a-scene").setAttribute("box-spread", "");
 
 /* -------- PANTIN GÉOMÉTRIQUE -------- */
 AFRAME.registerComponent("pantin", {
