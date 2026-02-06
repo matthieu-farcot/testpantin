@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <title>Pantin – Grand écart 180°</title>
@@ -10,27 +10,67 @@
 <a-scene background="color:#ECECEC">
 
   <!-- SOL -->
-  <a-plane rotation="-90 0 0" width="10" height="10" color="#bbb"></a-plane>
+  <a-plane rotation="-90 0 0"
+           width="10"
+           height="10"
+           color="#bbb">
+  </a-plane>
 
-  <!-- CAISSES -->
+  <!-- CAISSE GAUCHE -->
   <a-entity id="boxL">
-    <a-box position="0 0.25 0" width="0.6" height="0.5" depth="0.6" color="#7a4a1f"></a-box>
-    <a-box id="footL" position="0 0.55 0" width="0.3" height="0.1" depth="0.4" color="#111"></a-box>
+    <a-box position="0 0.25 0"
+           width="0.6"
+           height="0.5"
+           depth="0.6"
+           color="#7a4a1f">
+    </a-box>
+
+    <!-- chaussure -->
+    <a-box id="footL"
+           position="0 0.55 0"
+           width="0.3"
+           height="0.1"
+           depth="0.4"
+           color="#111">
+    </a-box>
   </a-entity>
 
+  <!-- CAISSE DROITE -->
   <a-entity id="boxR">
-    <a-box position="0 0.25 0" width="0.6" height="0.5" depth="0.6" color="#7a4a1f"></a-box>
-    <a-box id="footR" position="0 0.55 0" width="0.3" height="0.1" depth="0.4" color="#111"></a-box>
+    <a-box position="0 0.25 0"
+           width="0.6"
+           height="0.5"
+           depth="0.6"
+           color="#7a4a1f">
+    </a-box>
+
+    <!-- chaussure -->
+    <a-box id="footR"
+           position="0 0.55 0"
+           width="0.3"
+           height="0.1"
+           depth="0.4"
+           color="#111">
+    </a-box>
   </a-entity>
 
-  <!-- PANTIN (ÉPURÉ) -->
+  <!-- PANTIN (ÉPURÉ ET CORRECT) -->
   <a-entity id="pantin" pantin>
-    <!-- pelvis LOGIQUE (pas de mesh) -->
+
+    <!-- pelvis LOGIQUE (sans mesh) -->
     <a-entity id="pelvis"></a-entity>
 
-    <!-- jambes -->
-    <a-cylinder id="legL" radius="0.08" color="#2563eb"></a-cylinder>
-    <a-cylinder id="legR" radius="0.08" color="#2563eb"></a-cylinder>
+    <!-- jambes rigides -->
+    <a-cylinder id="legL"
+                radius="0.08"
+                color="#2563eb">
+    </a-cylinder>
+
+    <a-cylinder id="legR"
+                radius="0.08"
+                color="#2563eb">
+    </a-cylinder>
+
   </a-entity>
 
   <!-- CAMÉRA -->
@@ -41,24 +81,33 @@
 </a-scene>
 
 <script>
-/* -------- ANIMATION DES CAISSES -------- */
-let spreading = false;
-let spread = 1.2;
+/* =========================================================
+   PARAMÈTRES PHYSIQUES / GÉOMÉTRIQUES
+   ========================================================= */
 
-const boxWidth = 0.6;
-const legLength = 1.2;
-const minSpread = boxWidth;
-const maxSpread = 2 * legLength;
+const boxWidth  = 0.6;   // largeur caisse
+const legLength = 1.2;   // longueur jambe rigide
+
+const minSpread = boxWidth;        // collision caisses
+const maxSpread = 2 * legLength;  // grand écart 180°
+
+let spread = 1.2;
+let spreading = false;
+
+/* =========================================================
+   INTERACTION : CLIC = ÉCARTER / RELÂCHER = RASSEMBLER
+   ========================================================= */
 
 window.addEventListener("mousedown", () => spreading = true);
-window.addEventListener("mouseup", () => spreading = false);
+window.addEventListener("mouseup",   () => spreading = false);
 
 AFRAME.registerComponent("box-spread", {
   tick() {
     const speed = 0.02;
+
     spread += spreading ? speed : -speed;
 
-    // contrainte physique : pas d'interpénétration
+    // contraintes physiques
     spread = Math.min(Math.max(spread, minSpread), maxSpread);
 
     document.querySelector("#boxL").object3D.position.x = -spread / 2;
@@ -66,25 +115,36 @@ AFRAME.registerComponent("box-spread", {
   }
 });
 
-/* -------- PANTIN GÉOMÉTRIQUE -------- */
+document.querySelector("a-scene")
+  .setAttribute("box-spread", "");
+
+/* =========================================================
+   PANTIN GÉOMÉTRIQUE (GRAND ÉCART)
+   ========================================================= */
+
 AFRAME.registerComponent("pantin", {
   tick() {
-    const footL = document.querySelector("#footL").object3D.getWorldPosition(new THREE.Vector3());
-    const footR = document.querySelector("#footR").object3D.getWorldPosition(new THREE.Vector3());
+    const footL = document.querySelector("#footL")
+      .object3D.getWorldPosition(new THREE.Vector3());
 
-    const L = 1.2; // longueur jambe
+    const footR = document.querySelector("#footR")
+      .object3D.getWorldPosition(new THREE.Vector3());
+
     const d = footL.distanceTo(footR);
     const half = d / 2;
 
     let pelvisY;
-    if (d >= 2 * L) {
-      // grand écart facial complet (180°)
+
+    // grand écart facial 180°
+    if (d >= 2 * legLength) {
       pelvisY = footL.y;
     } else {
-      pelvisY = footL.y + Math.sqrt(L * L - half * half);
+      pelvisY = footL.y +
+        Math.sqrt(legLength * legLength - half * half);
     }
 
     const pelvisX = (footL.x + footR.x) / 2;
+
     const pelvis = document.querySelector("#pelvis").object3D;
     pelvis.position.set(pelvisX, pelvisY, 0);
 
@@ -93,14 +153,21 @@ AFRAME.registerComponent("pantin", {
   }
 });
 
-function connectLeg(id, foot, pelvis) {
-  const leg = document.querySelector(id).object3D;
+/* =========================================================
+   JAMBE = CYLINDRE ENTRE DEUX POINTS
+   ========================================================= */
+
+function connectLeg(selector, foot, pelvis) {
+  const leg = document.querySelector(selector).object3D;
 
   const mid = foot.clone().add(pelvis).multiplyScalar(0.5);
   const length = foot.distanceTo(pelvis);
 
   leg.position.copy(mid);
+
+  // cylindre A-Frame = hauteur 1 par défaut
   leg.scale.set(1, length, 1);
+
   leg.lookAt(pelvis);
   leg.rotateX(Math.PI / 2);
 }
